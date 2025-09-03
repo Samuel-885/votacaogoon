@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Votação das Equipes</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <img src="https://goondigital.com.br/wp-content/uploads/2023/07/logo-goon.webp" alt="Logo Goon" class="logo">
+      <h1>Vote na Melhor Equipe</h1>
+    </header>
+
+    <form id="votacaoForm">
+      <div class="form-group">
+        <label for="suaEquipe">Sua Equipe:</label>
+        <select id="suaEquipe" required>
+          <option value="">Selecione sua equipe</option>
+          <option value="Tráfego Pago">Tráfego Pago</option>
+          <option value="Allp Fit">Allp Fit</option>
+          <option value="SEO">SEO</option>
+          <option value="Podcast">Podcast</option>
+          <option value="Social Media">Social Media</option>
+          <option value="Designers">Designers</option>
+          <option value="Adm">Adm</option>
+          <option value="W3V">W3V</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="votoEquipe">Vote na melhor apresentação de equipe:</label>
+        <select id="votoEquipe" required>
+          <option value="">Escolha uma equipe para votar</option>
+        </select>
+      </div>
+
+      <button type="submit">Enviar Voto</button>
+    </form>
+
+    <div id="mensagem"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyClaS6owX2KeuqGVMLyOLuokQJgG5pCM4Y",
+        authDomain: "ranking-a04f3.firebaseapp.com",
+        projectId: "ranking-a04f3",
+        storageBucket: "ranking-a04f3.firebasestorage.app",
+        messagingSenderId: "933928657704",
+        appId: "1:933928657704:web:7cadbe365071c209d0e61d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const equipes = ["Tráfego Pago","Allp Fit","SEO","Podcast","Social Media","Designers","Adm","W3V"];
+    const suaEquipeSelect = document.getElementById("suaEquipe");
+    const votoEquipeSelect = document.getElementById("votoEquipe");
+    const form = document.getElementById("votacaoForm");
+    const mensagemDiv = document.getElementById("mensagem");
+
+    suaEquipeSelect.addEventListener("change", () => {
+        const suaEquipe = suaEquipeSelect.value;
+        votoEquipeSelect.innerHTML = '<option value="">Escolha uma equipe para votar</option>';
+
+        const opcoes = equipes.filter(equipe => equipe !== suaEquipe);
+        opcoes.forEach(equipe => {
+        const option = document.createElement("option");
+        option.value = equipe;
+        option.textContent = equipe;
+        votoEquipeSelect.appendChild(option);
+        });
+    });
+
+    function mostrarMensagem(texto, cor = "black") {
+        form.style.display = "none";
+        mensagemDiv.style.display = "flex";
+        mensagemDiv.style.justifyContent = "center";
+        mensagemDiv.style.alignItems = "center";
+        mensagemDiv.style.height = "200px";
+        mensagemDiv.style.fontSize = "1.5rem";
+        mensagemDiv.style.fontWeight = "bold";
+        mensagemDiv.style.color = cor;
+        mensagemDiv.textContent = texto;
+    }
+
+    const jaVotou = localStorage.getItem("votou") === "true";
+    const votoHora = localStorage.getItem("votoHora");
+
+    if (jaVotou && votoHora) {
+        const agora = new Date().getTime();
+        const horaVoto = parseInt(votoHora, 10);
+        const umaHora = 60 * 60 * 1000;
+
+        if (agora - horaVoto < umaHora) {
+        mostrarMensagem("Você já votou!");
+        } else {
+        localStorage.removeItem("votou");
+        localStorage.removeItem("votoHora");
+        form.style.display = "block";
+        mensagemDiv.style.display = "none";
+        }
+    } else {
+        form.style.display = "block";
+        mensagemDiv.style.display = "none";
+    }
+
+    // Envia voto para Firestore
+    form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const suaEquipe = suaEquipeSelect.value;
+    const votoEquipe = votoEquipeSelect.value;
+
+    if (!suaEquipe || !votoEquipe) {
+        mensagemDiv.style.color = "red";
+        mensagemDiv.textContent = "Por favor, selecione as duas equipes.";
+        return;
+    }
+
+    if (localStorage.getItem("votou") === "true") {
+        mostrarMensagem("Você já votou!", "orange");
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, "votos"), {
+        votante: suaEquipe,
+        voto: votoEquipe,
+        timestamp: Date.now()
+        });
+
+        localStorage.setItem("votou", "true");
+        localStorage.setItem("votoHora", new Date().getTime().toString());
+
+        // Mostra mensagem de sucesso
+        mostrarMensagem("✅ Voto enviado com sucesso!", "green");
+
+        // Redireciona após 2 segundos para a página do ranking
+        setTimeout(() => {
+        window.location.href = "https://rankingoon.netlify.app/"; // troque pelo caminho correto da página de ranking
+        }, 2000);
+
+    } catch (erro) {
+        mensagemDiv.style.color = "red";
+        mensagemDiv.textContent = "❌ Erro ao enviar voto. Verifique sua internet.";
+        console.error("Erro ao enviar voto para Firestore:", erro);
+    }
+    });
+
+    </script>
+
+</body>
+</html>
